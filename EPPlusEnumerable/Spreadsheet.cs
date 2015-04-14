@@ -42,6 +42,24 @@ namespace EPPlusEnumerable
         }
 
         /// <summary>
+        /// Creates an Excel spreadsheet with worksheets for each collection of objects.
+        /// </summary>
+        /// <param name="data">A collection of data collections. Each outer collection will be used as a worksheet, while the inner collections will be used as data rows.</param>
+        /// <returns>A populated ExcelPackage.</returns>
+        public static ExcelPackage CreatePackage(IEnumerable<IEnumerable<object>> data)
+        {
+            var package = new ExcelPackage();
+
+            foreach (var collection in data)
+            {
+                AddWorksheet(package, collection);
+            }
+
+            AddSpreadsheetLinks(package, data);
+
+            return package;
+        }
+        /// <summary>
         /// Creates an Excel spreadsheet with a single worksheet for the supplied data.
         /// </summary>
         /// <param name="data">Each row of the spreadsheet will contain one item from the data collection.</param>
@@ -56,6 +74,20 @@ namespace EPPlusEnumerable
             return package.GetAsByteArray();
         }
 
+        /// <summary>
+        /// Creates an Excel spreadsheet with a single worksheet for the supplied data.
+        /// </summary>
+        /// <param name="data">Each row of the spreadsheet will contain one item from the data collection.</param>
+        /// <returns>A populated Excel.</returns>
+        public static ExcelPackage CreatePackage(IEnumerable<object> data)
+        {
+            var package = new ExcelPackage();
+
+            AddWorksheet(package, data);
+            AddSpreadsheetLinks(package, new[] { data });
+
+            return package;
+        }
         #endregion
 
         #region Private Methods
