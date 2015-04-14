@@ -45,7 +45,7 @@ namespace EPPlusEnumerable
         /// Creates an Excel spreadsheet with worksheets for each collection of objects.
         /// </summary>
         /// <param name="data">A collection of data collections. Each outer collection will be used as a worksheet, while the inner collections will be used as data rows.</param>
-        /// <returns>A populated ExcelPackage.</returns>
+        /// <returns>A populated ExcelPackage object.</returns>
         public static ExcelPackage CreatePackage(IEnumerable<IEnumerable<object>> data)
         {
             var package = new ExcelPackage();
@@ -59,6 +59,7 @@ namespace EPPlusEnumerable
 
             return package;
         }
+
         /// <summary>
         /// Creates an Excel spreadsheet with a single worksheet for the supplied data.
         /// </summary>
@@ -78,7 +79,7 @@ namespace EPPlusEnumerable
         /// Creates an Excel spreadsheet with a single worksheet for the supplied data.
         /// </summary>
         /// <param name="data">Each row of the spreadsheet will contain one item from the data collection.</param>
-        /// <returns>A populated Excel.</returns>
+        /// <returns>A populated ExcelPackage object.</returns>
         public static ExcelPackage CreatePackage(IEnumerable<object> data)
         {
             var package = new ExcelPackage();
@@ -88,6 +89,7 @@ namespace EPPlusEnumerable
 
             return package;
         }
+
         #endregion
 
         #region Private Methods
@@ -328,7 +330,7 @@ namespace EPPlusEnumerable
                         // we found a match! this is the link target, 
                         // so add the hyperlink to the worksheet cell
                         // and stop searching for targets for this row
-                        worksheetCell.Hyperlink = new ExcelHyperLink(string.Format("{0}!{1}{2}", linkSheet.Name, linkColumn, linksheetRow), worksheetValue.ToString());
+                        worksheetCell.Hyperlink = new ExcelHyperLink(string.Format("'{0}'!{1}{2}", linkSheet.Name, linkColumn, linksheetRow), worksheetValue.ToString());
                         worksheetCell.Style.Font.UnderLine = true;
                         worksheetCell.Style.Font.Color.SetColor(Color.Blue);
                         break;
