@@ -20,7 +20,7 @@ namespace SampleConsoleApp
             using (var db = new SampleDataContext())
             {
                 data.Add(db.Users.OrderBy(x => x.Name).ToList());
-                data.Add(db.Orders.OrderBy(x => x.Customer).ThenByDescending(x => x.Date).ToList());
+                data.Add(db.Orders.OrderBy(x => x.Date).GroupBy(x => x.Date.Month));
             }
 
             var bytes = Spreadsheet.Create(data);
