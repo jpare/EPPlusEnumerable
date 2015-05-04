@@ -16,7 +16,7 @@ namespace EPPlusEnumerable
 
         private static readonly char[] _letters = "ABCDEFGHIJKLMNOPQRSTUVWXYZ".ToArray();
 
-        private const TableStyles DefaultTableStyle = TableStyles.Medium16;
+        private const TableStyles DefaultTableStyle = TableStyles.Medium16;        
 
         #endregion
 
@@ -101,9 +101,11 @@ namespace EPPlusEnumerable
                 return null;
             }
 
-            var collectionType = data.First().GetType();
+            string skipProperty = null;
+            var firstRow = data.First();
+            var collectionType = firstRow.GetType();
             var properties = collectionType.GetProperties();
-            var worksheetName = GetWorksheetName(collectionType);
+            var worksheetName = GetWorksheetName(firstRow, collectionType, out skipProperty);
             var worksheet = package.Workbook.Worksheets.Add(worksheetName);
             var lastColumn = GetColumnLetter(properties.Count());
 
@@ -112,6 +114,11 @@ namespace EPPlusEnumerable
             {
                 var property = properties[i - 1];
                 var propertyName = GetPropertyName(property);
+
+                if (skipProperty != null && property.Name.Equals(skipProperty))
+                {
+                    continue;
+                }
 
                 worksheet.Cells[string.Format("{0}1", GetColumnLetter(i))].Value = propertyName;
             }
@@ -125,21 +132,16 @@ namespace EPPlusEnumerable
                 {
                     var cell = string.Format("{0}{1}", GetColumnLetter(col), row);
                     var property = properties.ElementAt(col - 1);
-                    var value = property.GetValue(item) ?? string.Empty;
 
-                    switch (property.PropertyType.Name.ToLower())
+                    if (skipProperty != null && property.Name.Equals(skipProperty))
                     {
-                        // TODO: potentially add special formatting for other types (images, etc)
-
-                        case "icollection`1":
-                            // if the property is another collection, just show the count
-                            worksheet.Cells[cell].Value = (value as IEnumerable<object>).Count();
-                            break;
-
-                        default:
-                            worksheet.Cells[cell].Value = GetPropertyValue(property, item);
-                            break;
+                        // this property has a SpreadsheetTabNameAttribute
+                        // with ExcludeFromOutput set to true
+                        continue;
                     }
+
+                    var value = property.GetValue(item) ?? string.Empty;
+                    worksheet.Cells[cell].Value = GetPropertyValue(property, item);
                 }
             }
 
@@ -155,8 +157,9 @@ namespace EPPlusEnumerable
             return worksheet;
         }
 
-        private static string GetWorksheetName(Type collectionType)
+        private static string GetWorksheetName(object firstRow, Type collectionType, out string skipProperty)
         {
+            skipProperty = null;
             var worksheetName = collectionType.Name;
 
             // this is just to strip out the giant string of numbers that EntityFramework appends to
@@ -167,17 +170,41 @@ namespace EPPlusEnumerable
                 worksheetName = worksheetName.Substring(0, worksheetName.IndexOf('_'));
             }
 
-            var displayNameAttribute = collectionType.GetCustomAttribute<DisplayNameAttribute>(true);
-            if (displayNameAttribute != null)
+            var worksheetNameProperty = collectionType
+                .GetProperties()
+                .FirstOrDefault(prop => Attribute.IsDefined(prop, typeof(SpreadsheetTabNameAttribute), true));
+
+            if (worksheetNameProperty != null)
             {
-                worksheetName = displayNameAttribute.DisplayName;
+                var worksheetNameAttribute = worksheetNameProperty.GetCustomAttribute<SpreadsheetTabNameAttribute>(true);
+                var worksheetPropertyValue = worksheetNameProperty.GetValue(firstRow);
+
+                if (!string.IsNullOrWhiteSpace(worksheetNameAttribute.FormatString))
+                {
+                    worksheetName = string.Format(worksheetNameAttribute.FormatString, worksheetPropertyValue);
+                }
+
+                if (worksheetNameAttribute.ExcludeFromOutput)
+                {
+                    // this property has a SpreadsheetTabNameAttribute
+                    // with ExcludeFromOutput set to true
+                    skipProperty = worksheetNameProperty.Name;
+                }
             }
             else
             {
-                var displayAttribute = collectionType.GetCustomAttribute<DisplayAttribute>(true);
-                if (displayAttribute != null)
+                var displayNameAttribute = collectionType.GetCustomAttribute<DisplayNameAttribute>(true);
+                if (displayNameAttribute != null)
                 {
-                    worksheetName = displayAttribute.Name;
+                    worksheetName = displayNameAttribute.DisplayName;
+                }
+                else
+                {
+                    var displayAttribute = collectionType.GetCustomAttribute<DisplayAttribute>(true);
+                    if (displayAttribute != null)
+                    {
+                        worksheetName = displayAttribute.Name;
+                    }
                 }
             }
 
@@ -218,29 +245,47 @@ namespace EPPlusEnumerable
             return propertyName;
         }
 
-        private static string GetPropertyValue(PropertyInfo property, object item)
+        private static object GetPropertyValue(PropertyInfo property, object item)
         {
-            var value = property.GetValue(item);
-            string valueString = string.Empty;
+            var inputValue = property.GetValue(item);
+            object outputValue = string.Empty;
 
             var displayFormatAttribute = property.GetCustomAttribute<DisplayFormatAttribute>(true);
             if (displayFormatAttribute != null)
             {
-                if (value == null && !string.IsNullOrWhiteSpace(displayFormatAttribute.NullDisplayText))
+                if (inputValue == null && !string.IsNullOrWhiteSpace(displayFormatAttribute.NullDisplayText))
                 {
-                    valueString = displayFormatAttribute.NullDisplayText;
+                    outputValue = displayFormatAttribute.NullDisplayText;
                 }
-                else if (value != null)
+                else if (inputValue != null)
                 {
-                    valueString = string.Format(displayFormatAttribute.DataFormatString, value);
+                    outputValue = string.Format(displayFormatAttribute.DataFormatString, inputValue);
                 }
             }
-            else if (value != null)
+            else if (inputValue != null)
             {
-                valueString = value.ToString();
+                if (property.PropertyType.IsValueType)
+                {
+                    // for value types, just output the raw value
+                    outputValue = inputValue;
+                }
+                else
+                {
+                    var enumerable = (inputValue as IEnumerable<object>);
+                    if (enumerable != null)
+                    {
+                        // for collections, return a count
+                        outputValue = enumerable.Count();
+                    }
+                    else
+                    {
+                        // reference type
+                        outputValue = inputValue.ToString();
+                    }
+                }
             }
 
-            return valueString;
+            return outputValue;
         }
 
         private static void AddSpreadsheetLinks(ExcelPackage package, IEnumerable<IEnumerable<object>> data)
@@ -252,9 +297,11 @@ namespace EPPlusEnumerable
                     continue;
                 }
 
-                var collectionType = collection.First().GetType();
+                string skipProperty = null;
+                var firstRow = collection.First();
+                var collectionType = firstRow.GetType();
                 var properties = collectionType.GetProperties();
-                var worksheetName = GetWorksheetName(collectionType);
+                var worksheetName = GetWorksheetName(firstRow, collectionType, out skipProperty);
                 var worksheet = package.Workbook.Worksheets[worksheetName];
 
                 if (worksheet == null)
@@ -267,6 +314,14 @@ namespace EPPlusEnumerable
                 for (var prop = 1; prop <= properties.Count(); prop++)
                 {
                     var property = properties.ElementAt(prop - 1);
+
+                    if (skipProperty != null && property.Name.Equals(skipProperty))
+                    {
+                        // this property has a SpreadsheetTabName attribute 
+                        // with ExcludeFromOutput set to true
+                        continue;
+                    }
+
                     var attribute = property.GetCustomAttribute<SpreadsheetLinkAttribute>();
 
                     if (attribute == null)

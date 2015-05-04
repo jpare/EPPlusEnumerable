@@ -55,6 +55,7 @@ namespace SampleConsoleApp
         [DisplayFormat(DataFormatString = "{0:c}")]
         public decimal Price { get; set; }
 
+        [SpreadsheetTabName(FormatString = "{0:MMMM}")]
         public DateTime Date { get; set; }
     }
 }
