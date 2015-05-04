@@ -6,8 +6,6 @@ using System.ComponentModel;
 using System.ComponentModel.DataAnnotations;
 using System.IO;
 using System.Linq;
-using System.Text;
-using System.Threading.Tasks;
 
 namespace SampleConsoleApp
 {
@@ -16,11 +14,15 @@ namespace SampleConsoleApp
         static void Main(string[] args)
         {
             var data = new List<IEnumerable<object>>();
-
+            
             using (var db = new SampleDataContext())
             {
                 data.Add(db.Users.OrderBy(x => x.Name).ToList());
-                data.Add(db.Orders.OrderBy(x => x.Date).GroupBy(x => x.Date.Month));
+
+                foreach(var grouping in db.Orders.OrderBy(x => x.Date).GroupBy(x => x.Date.Month))
+                {
+                    data.Add(grouping.ToList());
+                }
             }
 
             var bytes = Spreadsheet.Create(data);
@@ -49,13 +51,13 @@ namespace SampleConsoleApp
 
         public string Item { get; set; }
 
-        [SpreadsheetLink("Customer", "Name")]
+        [SpreadsheetLink("Customers", "Name")]
         public string Customer { get; set; }
 
         [DisplayFormat(DataFormatString = "{0:c}")]
         public decimal Price { get; set; }
 
-        [SpreadsheetTabName(FormatString = "{0:MMMM}")]
+        [SpreadsheetTabName(FormatString = "{0:MMMM yyyy}")]
         public DateTime Date { get; set; }
     }
 }
