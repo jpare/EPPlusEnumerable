@@ -38,6 +38,7 @@ namespace SampleConsoleApp
                         Name = customer.ContactName,
                         Address = customer.Address,
                         City = customer.City,
+                        Country = customer.Country,
                         Zip = customer.PostalCode
                     });
 

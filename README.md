@@ -10,10 +10,14 @@ public ActionResult DownloadReport()
 {
     var data = new List<IEnumerable<object>>();
     
-    using(var db = new DataContext())
+    using (var db = new SampleDataContext())
     {
         data.Add(db.Users.OrderBy(x => x.Name).ToList());
-        data.Add(db.Orders.OrderByDescending(x => x.Date).ToList());
+
+        foreach(var grouping in db.Orders.OrderBy(x => x.Date).GroupBy(x => x.Date.Month))
+        {
+            data.Add(grouping.ToList());
+        }
     }
     
     var bytes = Spreadsheet.Create(data);
@@ -35,17 +39,20 @@ public class Order
 
     public string Item { get; set; }
 
-    [SpreadsheetLink("Customer", "Name")]
+    [SpreadsheetLink("Customers", "Name")]
     public string Customer { get; set; }
 
     [DisplayFormat(DataFormatString = "{0:c}")]
     public decimal Price { get; set; }
 
+    [SpreadsheetTabName(FormatString = "{0:MMMM yyyy}")]
     public DateTime Date { get; set; }
 }
 ```
 
 In this example, the "Customer" values in the Orders tab will be linked to the corresponding Customers tab row where the Name is equal to the value of the Order object's Customer property.
+
+In addition, the `SpreadsheetTabName` attribute specifies that the value of the given property should be used to name the tab in Excel. The first value of the collection will be used to generate the name of the tab. You can optionally specify a `FormatString` as above, and also specify `ExcludeFromOutput` if you don't want to include a column for the property that is used to name the tab. 
 
 ![links](https://raw.githubusercontent.com/bradwestness/EPPlusEnumerable/master/links.png)
 
