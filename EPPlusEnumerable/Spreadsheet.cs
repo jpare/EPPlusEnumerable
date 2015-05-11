@@ -111,7 +111,7 @@ namespace EPPlusEnumerable
             var col = 0;
 
             // add column headings
-            for (var i = 0; i <= properties.Count(); i++)
+            for (var i = 0; i < properties.Count(); i++)
             {
                 var property = properties[i];
                 var propertyName = GetPropertyName(property);
@@ -131,7 +131,7 @@ namespace EPPlusEnumerable
                 var item = data.ElementAt(row - 2);
                 col = 0;
 
-                for (var i = 0; i <= properties.Count(); i++)
+                for (var i = 0; i < properties.Count(); i++)
                 {
                     var property = properties.ElementAt(i);
 
