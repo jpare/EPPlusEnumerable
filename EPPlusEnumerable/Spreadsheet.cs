@@ -149,7 +149,7 @@ namespace EPPlusEnumerable
             }
 
             // set table formatting
-            using (var range = worksheet.Cells[string.Format("A1:{0}{1}", col, data.Count() + 1)])
+            using (var range = worksheet.Cells[string.Format("A1:{0}{1}", GetColumnLetter(col), data.Count() + 1)])
             {
                 range.AutoFitColumns();
 
