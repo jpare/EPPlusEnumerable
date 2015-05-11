@@ -189,7 +189,7 @@ namespace EPPlusEnumerable
                 }
                 else
                 {
-                    worksheetName = worksheetPropertyValue;
+                    worksheetName = worksheetPropertyValue.ToString();
                 }
 
                 if (worksheetNameAttribute.ExcludeFromOutput)
