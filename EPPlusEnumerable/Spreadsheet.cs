@@ -108,11 +108,12 @@ namespace EPPlusEnumerable
             var worksheetName = GetWorksheetName(firstRow, collectionType, out skipProperty);
             var worksheet = package.Workbook.Worksheets.Add(worksheetName);
             var lastColumn = GetColumnLetter(properties.Count());
+            var col = 0;
 
             // add column headings
-            for (var i = 1; i <= properties.Count(); i++)
+            for (var i = 0; i <= properties.Count(); i++)
             {
-                var property = properties[i - 1];
+                var property = properties[i];
                 var propertyName = GetPropertyName(property);
 
                 if (skipProperty != null && property.Name.Equals(skipProperty))
@@ -120,18 +121,19 @@ namespace EPPlusEnumerable
                     continue;
                 }
 
-                worksheet.Cells[string.Format("{0}1", GetColumnLetter(i))].Value = propertyName;
+                col += 1;
+                worksheet.Cells[string.Format("{0}1", GetColumnLetter(col))].Value = propertyName;
             }
 
             // add rows (starting with two, since Excel is 1-based and we added a row of column headings)
             for (var row = 2; row < data.Count() + 2; row++)
             {
                 var item = data.ElementAt(row - 2);
+                col = 0;
 
-                for (var col = 1; col <= properties.Count(); col++)
+                for (var i = 0; i <= properties.Count(); i++)
                 {
-                    var cell = string.Format("{0}{1}", GetColumnLetter(col), row);
-                    var property = properties.ElementAt(col - 1);
+                    var property = properties.ElementAt(i);
 
                     if (skipProperty != null && property.Name.Equals(skipProperty))
                     {
@@ -140,6 +142,8 @@ namespace EPPlusEnumerable
                         continue;
                     }
 
+                    col += 1;
+                    var cell = string.Format("{0}{1}", GetColumnLetter(col), row);
                     var value = property.GetValue(item) ?? string.Empty;
                     worksheet.Cells[cell].Value = GetPropertyValue(property, item);
                 }
@@ -182,6 +186,10 @@ namespace EPPlusEnumerable
                 if (!string.IsNullOrWhiteSpace(worksheetNameAttribute.FormatString))
                 {
                     worksheetName = string.Format(worksheetNameAttribute.FormatString, worksheetPropertyValue);
+                }
+                else
+                {
+                    worksheetName = worksheetPropertyValue;
                 }
 
                 if (worksheetNameAttribute.ExcludeFromOutput)
