@@ -107,7 +107,6 @@ namespace EPPlusEnumerable
             var properties = collectionType.GetProperties();
             var worksheetName = GetWorksheetName(firstRow, collectionType, out skipProperty);
             var worksheet = package.Workbook.Worksheets.Add(worksheetName);
-            var lastColumn = GetColumnLetter(properties.Count());
             var col = 0;
 
             // add column headings
@@ -150,7 +149,7 @@ namespace EPPlusEnumerable
             }
 
             // set table formatting
-            using (var range = worksheet.Cells[string.Format("A1:{0}{1}", lastColumn, data.Count() + 1)])
+            using (var range = worksheet.Cells[string.Format("A1:{0}{1}", col, data.Count() + 1)])
             {
                 range.AutoFitColumns();
 
