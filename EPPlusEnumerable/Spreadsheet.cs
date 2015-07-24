@@ -16,7 +16,7 @@ namespace EPPlusEnumerable
 
         private static readonly char[] _letters = "ABCDEFGHIJKLMNOPQRSTUVWXYZ".ToArray();
 
-        private const TableStyles DefaultTableStyle = TableStyles.Medium16;        
+        private const TableStyles DefaultTableStyle = TableStyles.Medium16;
 
         #endregion
 
@@ -324,7 +324,7 @@ namespace EPPlusEnumerable
 
                     if (skipProperty != null && property.Name.Equals(skipProperty))
                     {
-                        // this property has a SpreadsheetTabName attribute 
+                        // this property has a SpreadsheetTabName attribute
                         // with ExcludeFromOutput set to true
                         continue;
                     }
@@ -389,7 +389,7 @@ namespace EPPlusEnumerable
 
                     if (worksheetValue.Equals(linksheetValue))
                     {
-                        // we found a match! this is the link target, 
+                        // we found a match! this is the link target,
                         // so add the hyperlink to the worksheet cell
                         // and stop searching for targets for this row
                         worksheetCell.Hyperlink = new ExcelHyperLink(string.Format("'{0}'!{1}{2}", linkSheet.Name, linkColumn, linksheetRow), worksheetValue.ToString());
