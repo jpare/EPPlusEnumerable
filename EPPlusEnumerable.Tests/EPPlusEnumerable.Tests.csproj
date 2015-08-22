@@ -39,6 +39,10 @@
       <SpecificVersion>False</SpecificVersion>
       <HintPath>..\packages\EPPlus.4.0.4\lib\net20\EPPlus.dll</HintPath>
     </Reference>
+    <Reference Include="Faker, Version=1.2.0.0, Culture=neutral, processorArchitecture=MSIL">
+      <HintPath>..\packages\faker-csharp.1.2.0\lib\net4\Faker.dll</HintPath>
+      <Private>True</Private>
+    </Reference>
     <Reference Include="System" />
     <Reference Include="System.Core" />
     <Reference Include="System.Xml.Linq" />
@@ -71,10 +75,9 @@
       <Project>{5F028056-DFEF-4BBC-B97A-A0F798A2D04E}</Project>
       <Name>EPPlusEnumerable</Name>
     </ProjectReference>
-    <ProjectReference Include="..\SampleConsoleApp\SampleConsoleApp.csproj">
-      <Project>{CCEFFB30-1600-46FF-B6B7-366BEE40BBFE}</Project>
-      <Name>SampleConsoleApp</Name>
-    </ProjectReference>
+  </ItemGroup>
+  <ItemGroup>
+    <Service Include="{82A7F48D-3B50-4B1E-B82E-3ADA8210C358}" />
   </ItemGroup>
   <Import Project="$(MSBuildToolsPath)\Microsoft.CSharp.targets" />
   <Import Project="$(SolutionDir)\.nuget\NuGet.targets" Condition="Exists('$(SolutionDir)\.nuget\NuGet.targets')" />
