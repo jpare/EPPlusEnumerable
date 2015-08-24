@@ -1,38 +1,113 @@
-﻿using System;
-using Microsoft.VisualStudio.TestTools.UnitTesting;
-using SampleConsoleApp;
-using System.Linq;
-using System.Collections.Generic;
-using EPPlusEnumerable;
-
-namespace EPPlusEnumerable.Tests
+﻿namespace EPPlusEnumerable.Tests
 {
-    [TestClass]
+    using System;
+    using System.Collections.Generic;
+    using System.Linq;
+
+    using Faker;
+    using Faker.Generators;
+
+    using OfficeOpenXml;
+
+    using Xunit;
+
     public class UnitTests
     {
-        [TestMethod]
-        public void BasicFuntionality()
-        {
-            using (var db = new SampleDataContext())
-            {
-                var data = db.Users;
-                var package = Spreadsheet.CreatePackage(data);
-                Assert.IsTrue(package.Workbook.Worksheets.Count == 1);
-                Assert.IsTrue(package.Workbook.Worksheets[1].Name == "Customers");
-                Assert.IsTrue(package.Workbook.Worksheets[1].Dimension.End.Row - 1 == data.Count());
-            }
-        }
-
-        [TestMethod]
+        [Fact]
         public void WorksheetNameAttribute()
         {
-            using (var db = new SampleDataContext())
+            // Arrange
+            int rows = 1000;
+            var dataGenerator = new Fake<Grid>();
+            dataGenerator.SetProperty(x => x.DateTime, () => new DateTime(DateTime.UtcNow.Year, Numbers.Int(1, 13), 1));
+            var data = dataGenerator.Generate(rows);
+            var groupedData = data.GroupBy(x => x.DateTime).ToList();
+
+            // Act
+            var package = Spreadsheet.CreatePackage(groupedData);
+
+            // Assert
+            Assert.True(package.Workbook.Worksheets.Count == groupedData.Count);
+            for (int i = 1; i < package.Workbook.Worksheets.Count; i++)
             {
-                var data = db.Orders.OrderBy(x => x.Date).GroupBy(x => x.Date.Month);
-                var package = Spreadsheet.CreatePackage(data);
-                Assert.IsTrue(package.Workbook.Worksheets.Count > 1);
-                Assert.IsTrue(package.Workbook.Worksheets[package.Workbook.Worksheets.Count].Name == DateTime.Now.AddDays(-1).ToString("MMMM"));
+                Assert.True(package.Workbook.Worksheets[i].Dimension.End.Row == groupedData[i - 1].Count() + 1);
+                Assert.True(package.Workbook.Worksheets[i].Name == groupedData[i - 1].Key.ToString("MMMM yyyy"));
+                Assert.True(ValidWorksheet(package.Workbook.Worksheets[i], groupedData[i - 1].ToList()));
             }
-        }       
+            
+        } 
+
+        [Fact]
+        public void NoRows()
+        {
+            // Arrange
+            var data = new List<Grid>();
+
+            // Act
+            var package = Spreadsheet.CreatePackage(data);
+
+            // Assert
+            Assert.True(package.Workbook.Worksheets.Count == 0);
+
+        }
+
+        [Fact]
+        public void ValidateData()
+        {
+            // Arrange
+            int rows = 1000;
+            var dataGenerator = new Fake<Grid>();
+            var data = dataGenerator.Generate(rows);
+
+            // Act
+            var package = Spreadsheet.CreatePackage(data);
+
+            // Assert
+            Assert.True(package.Workbook.Worksheets.Count == 1);
+            Assert.True(package.Workbook.Worksheets[1].Dimension.End.Row == rows + 1);
+            Assert.True(ValidWorksheet(package.Workbook.Worksheets[1], data));
+        }
+
+        private static bool ValidWorksheet(ExcelWorksheet excelWorksheet, IList<Grid> data)
+        {
+            for (int i = 2; i <= data.Count; i++)
+            {
+                var validRow = ValidRow(excelWorksheet, i, data[i - 2]);
+                if (!validRow)
+                {
+                    return false;
+                }
+            }
+
+            return true;
+        }
+
+        private static bool ValidRow(ExcelWorksheet excelWorksheet, int row, Grid grid)
+        {
+            var properties = grid.GetType().GetProperties().ToList();
+
+            foreach (var propertyInfo in properties)
+            {
+                var value = excelWorksheet.Cells[row, properties.IndexOf(propertyInfo) + 1].Value;
+                if (propertyInfo.GetValue(grid).ToString() != value.ToString())
+                {
+                    return false;
+                }
+            }
+
+            return true;
+        }      
+    }
+
+    internal class Grid
+    {
+        public int Id { get; set; }
+
+        public string Name { get; set; }
+
+        public string Email { get; set; }
+
+        [SpreadsheetTabName(FormatString = "{0:MMMM yyyy}")]
+        public DateTime DateTime { get; set; }
     }
 }
