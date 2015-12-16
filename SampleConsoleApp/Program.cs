@@ -35,6 +35,9 @@ namespace SampleConsoleApp
     {
         public string Name { get; set; }
 
+        [SpreadsheetExclude]
+        public string Password { get; set; }
+
         public string Address { get; set; }
 
         public string City { get; set; }

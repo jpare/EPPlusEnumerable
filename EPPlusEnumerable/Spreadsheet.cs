@@ -101,11 +101,10 @@ namespace EPPlusEnumerable
                 return null;
             }
 
-            string skipProperty = null;
             var firstRow = data.First();
             var collectionType = firstRow.GetType();
             var properties = collectionType.GetProperties();
-            var worksheetName = GetWorksheetName(firstRow, collectionType, out skipProperty);
+            var worksheetName = GetWorksheetName(firstRow, collectionType);
             var worksheet = package.Workbook.Worksheets.Add(worksheetName);
             var col = 0;
 
@@ -115,8 +114,9 @@ namespace EPPlusEnumerable
                 var property = properties[i];
                 var propertyName = GetPropertyName(property);
 
-                if (skipProperty != null && property.Name.Equals(skipProperty))
+                if (property.GetCustomAttribute<SpreadsheetExcludeAttribute>() != null)
                 {
+                    // this property has a SpreadsheetExcludeAttribute
                     continue;
                 }
 
@@ -134,10 +134,8 @@ namespace EPPlusEnumerable
                 {
                     var property = properties.ElementAt(i);
 
-                    if (skipProperty != null && property.Name.Equals(skipProperty))
+                    if (property.GetCustomAttribute<SpreadsheetExcludeAttribute>() != null)
                     {
-                        // this property has a SpreadsheetTabNameAttribute
-                        // with ExcludeFromOutput set to true
                         continue;
                     }
 
@@ -160,9 +158,8 @@ namespace EPPlusEnumerable
             return worksheet;
         }
 
-        private static string GetWorksheetName(object firstRow, Type collectionType, out string skipProperty)
+        private static string GetWorksheetName(object firstRow, Type collectionType)
         {
-            skipProperty = null;
             var worksheetName = collectionType.Name;
 
             // this is just to strip out the giant string of numbers that EntityFramework appends to
@@ -189,13 +186,6 @@ namespace EPPlusEnumerable
                 else
                 {
                     worksheetName = worksheetPropertyValue.ToString();
-                }
-
-                if (worksheetNameAttribute.ExcludeFromOutput)
-                {
-                    // this property has a SpreadsheetTabNameAttribute
-                    // with ExcludeFromOutput set to true
-                    skipProperty = worksheetNameProperty.Name;
                 }
             }
             else
@@ -304,11 +294,10 @@ namespace EPPlusEnumerable
                     continue;
                 }
 
-                string skipProperty = null;
                 var firstRow = collection.First();
                 var collectionType = firstRow.GetType();
                 var properties = collectionType.GetProperties();
-                var worksheetName = GetWorksheetName(firstRow, collectionType, out skipProperty);
+                var worksheetName = GetWorksheetName(firstRow, collectionType);
                 var worksheet = package.Workbook.Worksheets[worksheetName];
 
                 if (worksheet == null)
@@ -322,10 +311,8 @@ namespace EPPlusEnumerable
                 {
                     var property = properties.ElementAt(prop - 1);
 
-                    if (skipProperty != null && property.Name.Equals(skipProperty))
+                    if (property.GetCustomAttribute<SpreadsheetExcludeAttribute>() != null)
                     {
-                        // this property has a SpreadsheetTabName attribute
-                        // with ExcludeFromOutput set to true
                         continue;
                     }
 

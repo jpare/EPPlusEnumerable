@@ -52,8 +52,10 @@ public class Order
 
 In this example, the "Customer" values in the Orders tab will be linked to the corresponding Customers tab row where the Name is equal to the value of the Order object's Customer property.
 
-In addition, the `SpreadsheetTabName` attribute specifies that the value of the given property should be used to name the tab in Excel. The first value of the collection will be used to generate the name of the tab. You can optionally specify a `FormatString` as above, and also specify `ExcludeFromOutput` if you don't want to include a column for the property that is used to name the tab. 
+In addition, the `SpreadsheetTabName` attribute specifies that the value of the given property should be used to name the tab in Excel. The first value of the collection will be used to generate the name of the tab. You can optionally specify a `FormatString` as above.
 
 ![links](https://raw.githubusercontent.com/bradwestness/EPPlusEnumerable/master/links.png)
+
+There's also a `SpreadsheetExclude` attribute you can use if you don't want to include a column for a given property in the generated spreadsheet.
 
 P.S. `DisplayName` or `Display(Name="")` attributes will be used for worksheet names if used on the class, or column headers if used on a property.
