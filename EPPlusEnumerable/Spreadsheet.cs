@@ -14,7 +14,7 @@ namespace EPPlusEnumerable
     {
         #region Static Fields
 
-        private static readonly char[] _letters = "ABCDEFGHIJKLMNOPQRSTUVWXYZ".ToArray();
+        private static readonly char[] Letters = "ABCDEFGHIJKLMNOPQRSTUVWXYZ".ToArray();
 
         private const TableStyles DefaultTableStyle = TableStyles.Medium16;
 
@@ -27,19 +27,7 @@ namespace EPPlusEnumerable
         /// </summary>
         /// <param name="data">A collection of data collections. Each outer collection will be used as a worksheet, while the inner collections will be used as data rows.</param>
         /// <returns>An Excel spreadsheet as a byte array.</returns>
-        public static byte[] Create(IEnumerable<IEnumerable<object>> data)
-        {
-            var package = new ExcelPackage();
-
-            foreach (var collection in data)
-            {
-                AddWorksheet(package, collection);
-            }
-
-            AddSpreadsheetLinks(package, data);
-
-            return package.GetAsByteArray();
-        }
+        public static byte[] Create(IEnumerable<IEnumerable<object>> data) => CreatePackage(data).GetAsByteArray();
 
         /// <summary>
         /// Creates an Excel spreadsheet with worksheets for each collection of objects.
@@ -50,12 +38,13 @@ namespace EPPlusEnumerable
         {
             var package = new ExcelPackage();
 
-            foreach (var collection in data)
+            var collections = data as IList<IEnumerable<object>> ?? data.ToList();
+            foreach (var collection in collections)
             {
-                AddWorksheet(package, collection);
+                AddWorksheet(package, collection as IList<object> ?? collection.ToList());
             }
 
-            AddSpreadsheetLinks(package, data);
+            AddSpreadsheetLinks(package, collections);
 
             return package;
         }
@@ -65,16 +54,7 @@ namespace EPPlusEnumerable
         /// </summary>
         /// <param name="data">Each row of the spreadsheet will contain one item from the data collection.</param>
         /// <returns>An Excel spreadsheet as a byte array.</returns>
-        public static byte[] Create(IEnumerable<object> data)
-        {
-            var package = new ExcelPackage();
-
-            var list = data as IList<object> ?? data.ToList();
-            AddWorksheet(package, list);
-            AddSpreadsheetLinks(package, new[] { list });
-
-            return package.GetAsByteArray();
-        }
+        public static byte[] Create(IEnumerable<object> data) => CreatePackage(data).GetAsByteArray();
 
         /// <summary>
         /// Creates an Excel spreadsheet with a single worksheet for the supplied data.
@@ -111,12 +91,10 @@ namespace EPPlusEnumerable
 
         #region Private Methods
 
-        private static ExcelWorksheet AddWorksheet(ExcelPackage package, IEnumerable<object> data, string worksheetName = null)
+        private static ExcelWorksheet AddWorksheet(ExcelPackage package, ICollection<object> data, string worksheetName = null)
         {
             if (data == null || !data.Any())
-            {
                 return null;
-            }
 
             var firstRow = data.First();
             var collectionType = firstRow.GetType();
@@ -126,9 +104,8 @@ namespace EPPlusEnumerable
             var col = 0;
 
             // add column headings
-            for (var i = 0; i < properties.Count(); i++)
+            foreach (var property in properties)
             {
-                var property = properties[i];
                 var propertyName = GetPropertyName(property);
 
                 if (property.GetCustomAttribute<SpreadsheetExcludeAttribute>() != null)
@@ -138,16 +115,16 @@ namespace EPPlusEnumerable
                 }
 
                 col += 1;
-                worksheet.Cells[string.Format("{0}1", GetColumnLetter(col))].Value = propertyName;
+                worksheet.Cells[$"{GetColumnLetter(col)}1"].Value = propertyName;
             }
 
             // add rows (starting with two, since Excel is 1-based and we added a row of column headings)
-            for (var row = 2; row < data.Count() + 2; row++)
+            for (var row = 2; row < data.Count + 2; row++)
             {
                 var item = data.ElementAt(row - 2);
                 col = 0;
 
-                for (var i = 0; i < properties.Count(); i++)
+                for (var i = 0; i < properties.Length; i++)
                 {
                     var property = properties.ElementAt(i);
 
@@ -157,18 +134,18 @@ namespace EPPlusEnumerable
                     }
 
                     col += 1;
-                    var cell = string.Format("{0}{1}", GetColumnLetter(col), row);
-                    var value = property.GetValue(item) ?? string.Empty;
+                    var cell = $"{GetColumnLetter(col)}{row}";
+                    //var value = property.GetValue(item) ?? string.Empty;
                     worksheet.Cells[cell].Value = GetPropertyValue(property, item);
                 }
             }
 
             // set table formatting
-            using (var range = worksheet.Cells[string.Format("A1:{0}{1}", GetColumnLetter(col), data.Count() + 1)])
+            using (var range = worksheet.Cells[$"A1:{GetColumnLetter(col)}{data.Count + 1}"])
             {
                 range.AutoFitColumns();
 
-                var table = worksheet.Tables.Add(range, "table_" + worksheetName);
+                var table = worksheet.Tables.Add(range, "table_" + worksheetName.Replace(" ", string.Empty));
                 table.TableStyle = GetTableStyle(collectionType);
             }
 
@@ -196,14 +173,7 @@ namespace EPPlusEnumerable
                 var worksheetNameAttribute = worksheetNameProperty.GetCustomAttribute<SpreadsheetTabNameAttribute>(true);
                 var worksheetPropertyValue = worksheetNameProperty.GetValue(firstRow);
 
-                if (!string.IsNullOrWhiteSpace(worksheetNameAttribute.FormatString))
-                {
-                    worksheetName = string.Format(worksheetNameAttribute.FormatString, worksheetPropertyValue);
-                }
-                else
-                {
-                    worksheetName = worksheetPropertyValue.ToString();
-                }
+                worksheetName = !string.IsNullOrWhiteSpace(worksheetNameAttribute.FormatString) ? string.Format(worksheetNameAttribute.FormatString, worksheetPropertyValue) : worksheetPropertyValue.ToString();
             }
             else
             {
@@ -238,7 +208,7 @@ namespace EPPlusEnumerable
             return tableStyle;
         }
 
-        private static string GetPropertyName(PropertyInfo property)
+        private static string GetPropertyName(MemberInfo property)
         {
             var propertyName = property.Name;
 
@@ -306,12 +276,13 @@ namespace EPPlusEnumerable
         {
             foreach (var collection in data)
             {
-                if (collection == null || !collection.Any())
+                var objects = collection as IList<object> ?? collection.ToList();
+                if (collection == null || !objects.Any())
                 {
                     continue;
                 }
 
-                var firstRow = collection.First();
+                var firstRow = objects.First();
                 var collectionType = firstRow.GetType();
                 var properties = collectionType.GetProperties();
                 var worksheetName = GetWorksheetName(firstRow, collectionType);
@@ -324,7 +295,7 @@ namespace EPPlusEnumerable
 
                 // loop through the properties in the collection type
                 // and see if any have a SpreadsheetLinkAttribute specified
-                for (var prop = 1; prop <= properties.Count(); prop++)
+                for (var prop = 1; prop <= properties.Length; prop++)
                 {
                     var property = properties.ElementAt(prop - 1);
 
@@ -382,21 +353,21 @@ namespace EPPlusEnumerable
             // that had the SpreadsheetLinkAttribute and try to find a link target for each
             for (var worksheetRow = 1; worksheetRow <= worksheet.Dimension.Rows; worksheetRow++)
             {
-                var worksheetCell = worksheet.Cells[string.Format("{0}{1}", GetColumnLetter(worksheetColumnIndex), worksheetRow)];
+                var worksheetCell = worksheet.Cells[$"{GetColumnLetter(worksheetColumnIndex)}{worksheetRow}"];
                 var worksheetValue = worksheetCell.Value.ToString();
 
                 // loop through the cells of the target worksheet column and see if any of the values
                 // match the value of the current worksheet cell
                 for (var linksheetRow = 1; linksheetRow <= linkSheet.Dimension.Rows; linksheetRow++)
                 {
-                    var linksheetValue = linkSheet.Cells[string.Format("{0}{1}", linkColumn, linksheetRow)].Value.ToString();
+                    var linksheetValue = linkSheet.Cells[$"{linkColumn}{linksheetRow}"].Value.ToString();
 
                     if (worksheetValue.Equals(linksheetValue))
                     {
                         // we found a match! this is the link target,
                         // so add the hyperlink to the worksheet cell
                         // and stop searching for targets for this row
-                        worksheetCell.Hyperlink = new ExcelHyperLink(string.Format("'{0}'!{1}{2}", linkSheet.Name, linkColumn, linksheetRow), worksheetValue.ToString());
+                        worksheetCell.Hyperlink = new ExcelHyperLink($"'{linkSheet.Name}'!{linkColumn}{linksheetRow}", worksheetValue.ToString());
                         worksheetCell.Style.Font.UnderLine = true;
                         worksheetCell.Style.Font.Color.SetColor(Color.Blue);
                         break;
@@ -412,19 +383,19 @@ namespace EPPlusEnumerable
         /// <returns>The corresponding Excel-style column letter.</returns>
         private static string GetColumnLetter(int column)
         {
-            if (column <= _letters.Length)
+            if (column <= Letters.Length)
             {
-                return _letters[column - 1].ToString();
+                return Letters[column - 1].ToString();
             }
 
             var number = column;
-            string letter = string.Empty;
+            var letter = string.Empty;
 
             while (number > 0)
             {
-                var remainder = (number - 1) % _letters.Length;
-                letter = _letters[remainder] + letter;
-                number = (number - remainder) / _letters.Length;
+                var remainder = (number - 1) % Letters.Length;
+                letter = Letters[remainder] + letter;
+                number = (number - remainder) / Letters.Length;
             }
 
             return letter;
