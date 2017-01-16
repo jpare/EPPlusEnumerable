@@ -69,8 +69,9 @@ namespace EPPlusEnumerable
         {
             var package = new ExcelPackage();
 
-            AddWorksheet(package, data);
-            AddSpreadsheetLinks(package, new[] { data });
+            var list = data as IList<object> ?? data.ToList();
+            AddWorksheet(package, list);
+            AddSpreadsheetLinks(package, new[] { list });
 
             return package.GetAsByteArray();
         }
@@ -84,17 +85,33 @@ namespace EPPlusEnumerable
         {
             var package = new ExcelPackage();
 
-            AddWorksheet(package, data);
-            AddSpreadsheetLinks(package, new[] { data });
+            var list = data as IList<object> ?? data.ToList();
+            AddWorksheet(package, list);
+            AddSpreadsheetLinks(package, new[] { list });
 
             return package;
         }
 
+        /// <summary>
+        /// Create a single worksheet with the supplied data.
+        /// </summary>
+        /// <param name="package">The existing package</param>
+        /// <param name="worksheetName">The name of the new worksheet</param>
+        /// <param name="data">Each row of the spreadsheet will contain one item from the data collection.</param>
+        /// <returns></returns>
+        public static ExcelWorksheet CreateWorksheet(ExcelPackage package, string worksheetName, IEnumerable<object> data)
+        {
+            var list = data as IList<object> ?? data.ToList();
+            var retVal = AddWorksheet(package, list, worksheetName);
+            AddSpreadsheetLinks(package, new[] { list });
+
+            return retVal;
+        }
         #endregion
 
         #region Private Methods
 
-        private static ExcelWorksheet AddWorksheet(ExcelPackage package, IEnumerable<object> data)
+        private static ExcelWorksheet AddWorksheet(ExcelPackage package, IEnumerable<object> data, string worksheetName = null)
         {
             if (data == null || !data.Any())
             {
@@ -104,7 +121,7 @@ namespace EPPlusEnumerable
             var firstRow = data.First();
             var collectionType = firstRow.GetType();
             var properties = collectionType.GetProperties();
-            var worksheetName = GetWorksheetName(firstRow, collectionType);
+            worksheetName = worksheetName ?? GetWorksheetName(firstRow, collectionType);
             var worksheet = package.Workbook.Worksheets.Add(worksheetName);
             var col = 0;
 
@@ -151,7 +168,7 @@ namespace EPPlusEnumerable
             {
                 range.AutoFitColumns();
 
-                var table = worksheet.Tables.Add(range, "table_" + worksheetName.Replace(" ", string.Empty));
+                var table = worksheet.Tables.Add(range, "table_" + worksheetName);
                 table.TableStyle = GetTableStyle(collectionType);
             }
 
