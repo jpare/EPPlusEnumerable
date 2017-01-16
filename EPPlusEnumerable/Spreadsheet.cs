@@ -151,7 +151,7 @@ namespace EPPlusEnumerable
             {
                 range.AutoFitColumns();
 
-                var table = worksheet.Tables.Add(range, "table_" + worksheetName);
+                var table = worksheet.Tables.Add(range, "table_" + worksheetName.Replace(" ", string.Empty));
                 table.TableStyle = GetTableStyle(collectionType);
             }
 
